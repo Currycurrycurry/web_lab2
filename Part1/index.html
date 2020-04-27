@@ -14,11 +14,23 @@
 <script src="./js/FirstPersonControls.js"></script>
 <script src="js/GLTFLoader.js"></script>
 <script>
-    console.log("crashed!");
-    const socket = io('localhost:3000');
+
+    String.prototype.format= function(){
+        //将arguments转化为数组（ES5中并非严格的数组）
+        var args = Array.prototype.slice.call(arguments);
+        var count=0;
+        //通过正则替换%s
+        return this.replace(/{}/g,function(s,i){
+            return args[count++];
+        });
+    }
+
+    const socket = io('ws://localhost:3000');
+    console.log("socket is {}.".format(socket));
     // Our Javascript will go here.
     // 创建场景
     const scene = new THREE.Scene(); //包含摄像机、地形、天空盒子等
+    console.log("scene is {} ".format(scene));
     // 渲染时可以在不同场景之间切换
     //负责游戏对象的创建和销毁
     //游戏的每一个关卡对应一个场景
@@ -26,6 +38,7 @@
     // 添加摄像机
     const SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
     const VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.3, FAR = 1000;
+    console.log('screen info: {} and {}.'.format(SCREEN_WIDTH, SCREEN_HEIGHT));
     const camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
     camera.position.set(0, 20, 50);
     camera.lookAt(new THREE.Vector3(0, 15, 0)); // 不能直接lookat三个数字！必须是vector3对象！
@@ -111,13 +124,20 @@
             let model = playerMap.get(data.socketid);
             model.position.set(data.position.x, data.position.y, data.position.z);
             model.rotation.set(data.rotation._x, data.rotation._y + Math.PI / 2, data.rotation._z);
-            // 碰撞检测
         } else {
+            console.log('else first : {}'.format(playerMap.has(data.socketid)));
+            socket.emit('player', {position: fpc.yawObject.position, rotation: fpc.yawObject.rotation});
             const loader = new THREE.GLTFLoader();
             loader.load("./assets/models/duck.glb", (mesh) => {
-                mesh.scene.scale.set(10, 10, 10);
-                scene.add(mesh.scene);
-                playerMap.set(data.socketid, mesh.scene);
+            console.log('else second : {}'.format(playerMap.has(data.socketid)));
+                //如果这个判断注释掉会怎么样，为什么
+                if(!playerMap.has(data.socketid)) {
+                    console.log('else + if : {} '.format(playerMap.has(data.socketid)));
+                    mesh.scene.scale.set(10, 10, 10);
+                    scene.add(mesh.scene);
+                    playerMap.set(data.socketid, mesh.scene);
+                    let model = playerMap.get(data.socketid);
+                }
             });
         }
     });
